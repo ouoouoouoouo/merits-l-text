@@ -1,0 +1,21 @@
+# IEMOCAP Stage I text-only — minimal deps, no ffmpeg / libsndfile / audio libs.
+# Use this on shared GPU clusters where you don't have sudo and can't install
+# system audio libs. Switch to requirements.txt once you tackle the
+# MSP-PODCAST pretrain (which needs Whisper + librosa).
+
+# Core
+torch>=2.1.0
+transformers>=4.40.0
+accelerate>=0.30.0
+tokenizers>=0.15.0
+
+# Data / metrics
+numpy>=1.24
+pandas>=2.0
+scikit-learn>=1.3
+pyyaml>=6.0
+tqdm>=4.66
+
+# Logging
+tensorboard>=2.14
+wandb>=0.16

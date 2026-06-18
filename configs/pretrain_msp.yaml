@@ -1,0 +1,52 @@
+# Pretrain — RoBERTa-large on MSP-PODCAST transcripts with LLM (GPT-3.5 Turbo)
+# pseudo-labels (positive / negative / neutral). This produces "RoBERTa-FT"
+# which is then used as the encoder initialization for Stage I downstream
+# fine-tuning on IEMOCAP / MELD / MOSI.
+#
+# Paper: 10 epochs, lr=1e-4, batch=32, AdamW, CE.
+
+run_name: pretrain_msp_roberta_large
+seed: 42
+output_dir: outputs/pretrain_msp
+
+dataset:
+  name: msp_podcast_pseudo
+  # Path to the manifest produced by scripts/llm_pseudo_label_msp.py
+  # Expected columns: utt_id,text,label (label in {positive, negative, neutral})
+  manifest_path: data/manifests/msp_podcast/pseudo_labels.csv
+  val_fraction: 0.20    # paper: 80% train / 20% val (random)
+  label_map:
+    negative: 0
+    neutral:  1
+    positive: 2
+  num_labels: 3
+  label_names: [negative, neutral, positive]
+
+model:
+  name: roberta_text_classifier
+  pretrained: roberta-large
+  num_labels: 3
+  dropout: 0.1
+  freeze_encoder: false
+  max_length: 128
+
+train:
+  epochs: 10
+  batch_size: 32
+  eval_batch_size: 128
+  learning_rate: 1.0e-4
+  weight_decay: 0.01
+  warmup_ratio: 0.06
+  optimizer: adamw
+  scheduler: linear
+  grad_clip: 1.0
+  fp16: true
+  early_stopping_patience: 4
+  save_best_metric: weighted_f1
+  save_best_split: val
+  num_workers: 4
+
+logging:
+  use_wandb: false
+  wandb_project: merits-l-text
+  log_every: 100

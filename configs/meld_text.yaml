@@ -1,0 +1,59 @@
+# Stage I — Text-only, MELD (7-way: anger / disgust / fear / joy / neutral / sadness / surprise)
+# Paper target: weighted F1 = 63.81 (Stage I), 65.24 (Stage II).
+
+run_name: meld_text_stage1
+seed: 42
+output_dir: outputs/meld_text_stage1
+
+dataset:
+  name: meld
+  root: ${oc.env:MELD_ROOT,/workspace/datasets/MELD}
+  manifest_dir: data/manifests/meld
+  # Standard MELD distribution ships these CSVs (under MELD.Raw or MELD).
+  csv_train: train_sent_emo.csv
+  csv_val: dev_sent_emo.csv
+  csv_test: test_sent_emo.csv
+  text_column: Utterance
+  label_column: Emotion
+  label_map:
+    anger: 0
+    disgust: 1
+    fear: 2
+    joy: 3
+    neutral: 4
+    sadness: 5
+    surprise: 6
+  num_labels: 7
+  label_names: [anger, disgust, fear, joy, neutral, sadness, surprise]
+
+model:
+  name: roberta_text_classifier
+  pretrained: roberta-large
+  num_labels: 7
+  dropout: 0.1
+  freeze_encoder: false
+  max_length: 128
+
+train:
+  epochs: 50
+  batch_size: 32
+  eval_batch_size: 64
+  learning_rate: 1.0e-4
+  weight_decay: 0.01
+  warmup_ratio: 0.06
+  optimizer: adamw
+  scheduler: linear
+  grad_clip: 1.0
+  fp16: true
+  early_stopping_patience: 8
+  save_best_metric: weighted_f1
+  save_best_split: val
+  num_workers: 4
+  # MELD is heavily imbalanced (neutral ≈ 47%). Paper uses plain CE; this flag
+  # lets you turn on inverse-frequency class weights to experiment.
+  class_weighted_loss: false
+
+logging:
+  use_wandb: false
+  wandb_project: merits-l-text
+  log_every: 50

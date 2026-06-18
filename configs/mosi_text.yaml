@@ -1,0 +1,58 @@
+# Stage I — Text-only, CMU-MOSI (binary: positive vs negative sentiment)
+# Paper target: weighted F1 = 85.41 (Stage I), 86.02 (Stage II).
+#
+# Split (Poria et al. [50] partitioning followed by the paper):
+#   monologues  1-49 -> train
+#   monologues 50-62 -> validation
+#   monologues 63-93 -> test
+# Label rule: utterance sentiment in [-3, 0) -> negative (0); [0, 3] -> positive (1).
+
+run_name: mosi_text_stage1
+seed: 42
+output_dir: outputs/mosi_text_stage1
+
+dataset:
+  name: mosi
+  root: ${oc.env:MOSI_ROOT,/workspace/datasets/CMU-MOSI}
+  manifest_dir: data/manifests/mosi
+  # If you already have a flat CSV with (video_id, utterance_id, text, label_score),
+  # point csv_path at it. Otherwise the preprocessor expects the standard
+  # CMU-MultimodalSDK transcript CSV; see scripts/preprocess_mosi.py.
+  csv_path: null
+  text_column: text
+  score_column: sentiment
+  id_column: video_id
+  train_monologues: [1, 49]   # inclusive range
+  val_monologues:   [50, 62]
+  test_monologues:  [63, 93]
+  num_labels: 2
+  label_names: [negative, positive]
+
+model:
+  name: roberta_text_classifier
+  pretrained: roberta-large
+  num_labels: 2
+  dropout: 0.1
+  freeze_encoder: false
+  max_length: 128
+
+train:
+  epochs: 50
+  batch_size: 32
+  eval_batch_size: 64
+  learning_rate: 1.0e-4
+  weight_decay: 0.01
+  warmup_ratio: 0.06
+  optimizer: adamw
+  scheduler: linear
+  grad_clip: 1.0
+  fp16: true
+  early_stopping_patience: 8
+  save_best_metric: weighted_f1
+  save_best_split: val
+  num_workers: 4
+
+logging:
+  use_wandb: false
+  wandb_project: merits-l-text
+  log_every: 50
