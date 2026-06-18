@@ -77,13 +77,17 @@ nvidia-smi
 只要顯示的版本 **≥ 12.1**，就用 CUDA 12.1 的 PyTorch wheel（**包含自己的 CUDA runtime**，不用裝 toolkit）：
 
 ```bash
-pip install torch==2.3.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121
+# 最新版 (推薦) — transformers 4.40+ 要求 torch >= 2.4
+pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
 ```
+
+> ⚠️ 不要釘到 torch 2.3.x — 跟新版 `transformers` 不相容會在 model load 階段報
+> `AutoModel requires the PyTorch library but it was not found`。
 
 如果 `nvidia-smi` 顯示 11.8 之類舊版本：
 
 ```bash
-pip install torch==2.3.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu118
+pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu118
 ```
 
 驗證 GPU 抓得到：
@@ -96,7 +100,7 @@ python -c "import torch; print(torch.__version__, torch.cuda.is_available(), tor
 ### 3.2 沒 GPU（純測試 pipeline）
 
 ```bash
-pip install torch==2.3.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cpu
+pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
 ```
 
 ---

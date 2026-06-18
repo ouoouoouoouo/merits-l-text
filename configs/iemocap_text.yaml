@@ -8,7 +8,7 @@ output_dir: outputs/iemocap_text_stage1
 
 dataset:
   name: iemocap
-  root: ${oc.env:IEMOCAP_ROOT,D:/CVdataset/IEMOCAP_full_release}
+  root: ${oc.env:IEMOCAP_ROOT,/path/to/IEMOCAP_full_release}
   manifest_dir: data/manifests/iemocap
   # session 5 = test, session 1 = val, sessions 2-4 = train (paper)
   train_sessions: [2, 3, 4]

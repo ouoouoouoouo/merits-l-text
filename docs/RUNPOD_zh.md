@@ -69,7 +69,7 @@ emo evaluation 兩個資料夾**，不到 100MB。所以只傳必要的東西就
 ### 4.1 在你本機（Windows PowerShell）打包出文字部分
 
 ```powershell
-cd "D:\CVdataset"
+cd "C:\path\to\datasets"
 # 只壓 transcriptions/ 和 EmoEvaluation/，跳過 .wav .avi 等大檔
 $src = "IEMOCAP_full_release"
 $out = "IEMOCAP_text_only.zip"
@@ -89,7 +89,7 @@ Compress-Archive `
   -DestinationPath $out
 ```
 
-得到 `D:\CVdataset\IEMOCAP_text_only.zip`（約 5MB）。
+得到 `C:\path\to\datasets\IEMOCAP_text_only.zip`（約 5MB）。
 
 ### 4.2 上傳到 Pod
 
@@ -104,7 +104,7 @@ cd /workspace/datasets
 
 ```bash
 # 本機 PowerShell / bash
-scp -P <pod-port> -i ~/.ssh/id_ed25519 D:/CVdataset/IEMOCAP_text_only.zip root@<pod-ip>:/workspace/datasets/
+scp -P <pod-port> -i ~/.ssh/id_ed25519 C:/path/to/datasets/IEMOCAP_text_only.zip root@<pod-ip>:/workspace/datasets/
 ```
 
 回到 pod 上解壓 + **重建論文要求的目錄結構**：

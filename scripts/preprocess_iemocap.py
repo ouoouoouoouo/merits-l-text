@@ -2,7 +2,7 @@
 
 Usage:
     python -m scripts.preprocess_iemocap \
-        --iemocap-root "D:/CVdataset/IEMOCAP_full_release" \
+        --iemocap-root /path/to/IEMOCAP_full_release \
         --out-dir data/manifests/iemocap
 """
 from __future__ import annotations

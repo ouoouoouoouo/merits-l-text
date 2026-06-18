@@ -4,7 +4,10 @@
 # MSP-PODCAST pretrain (which needs Whisper + librosa).
 
 # Core
-torch>=2.1.0
+# NOTE: install torch separately first to control CUDA wheel:
+#   pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
+# transformers 4.40+ requires torch >= 2.4, so do NOT pin to 2.3.x.
+torch>=2.4.0
 transformers>=4.40.0
 accelerate>=0.30.0
 tokenizers>=0.15.0

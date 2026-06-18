@@ -19,7 +19,7 @@ WORKDIR /workspace
 
 # Install PyTorch with CUDA 12.1 wheels first (so the rest can resolve correctly).
 RUN pip install --upgrade pip \
-    && pip install torch==2.3.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121
+    && pip install torch==2.5.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu121
 
 COPY requirements.txt /workspace/requirements.txt
 RUN pip install -r /workspace/requirements.txt

@@ -61,7 +61,7 @@ python -m venv .venv
 
 pip install -r requirements-text.txt     # IEMOCAP 只需要這個
 # Windows PowerShell:
-$env:IEMOCAP_ROOT = "D:/CVdataset/IEMOCAP_full_release"
+$env:IEMOCAP_ROOT = "C:/path/to/IEMOCAP_full_release"
 
 python -m src.train --config configs/iemocap_text.yaml
 ```
@@ -71,7 +71,7 @@ python -m src.train --config configs/iemocap_text.yaml
 ```bash
 # 詳見 docs/CONDA_zh.md
 conda create -n merits python=3.10 -y && conda activate merits
-pip install torch==2.3.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121
+pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
 pip install -r requirements-text.txt
 
 export IEMOCAP_ROOT=/path/to/IEMOCAP_full_release
@@ -135,7 +135,7 @@ tensorboard --logdir outputs/
 ## 5 ‧ 怎麼判斷有沒有跑對
 
 驗證點 1：data manifest 句數
-- 跑完 `python -m scripts.preprocess_iemocap --iemocap-root D:/CVdataset/IEMOCAP_full_release`
+- 跑完 `python -m scripts.preprocess_iemocap --iemocap-root /path/to/IEMOCAP_full_release`
 - `data/manifests/iemocap/train.csv` + `val.csv` + `test.csv` 行數加起來應該是 **5531** (扣掉 header)
 - train=3205 / val=1085 / test=1241 ← 已經在我本機驗過
 

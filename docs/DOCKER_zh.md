@@ -82,8 +82,8 @@ Container 退出後資料就消失。要讓資料/程式碼能進出，用 `-v` 
 
 ```bash
 docker run -it --rm \
-    -v "D:/LLM supervised multimodal SER":/workspace/code \
-    -v "D:/CVdataset/IEMOCAP_full_release":/workspace/datasets/IEMOCAP_full_release \
+    -v "/path/to/this/repo":/workspace/code \
+    -v "/path/to/IEMOCAP_full_release":/workspace/datasets/IEMOCAP_full_release \
     python:3.10-slim bash
 ```
 
@@ -98,7 +98,7 @@ docker run -it --rm \
 ```bash
 docker run -it --rm \
     -p 6006:6006 \
-    -v "D:/LLM supervised multimodal SER":/workspace/code \
+    -v "/path/to/this/repo":/workspace/code \
     your-image \
     bash
 # 進去後 tensorboard --logdir outputs --bind_all
@@ -155,7 +155,7 @@ container 啟動時的預設指令。`docker run image` 時會跑這個。
 ### 6.1 Build image
 
 ```bash
-cd "D:/LLM supervised multimodal SER"
+cd "/path/to/this/repo"
 docker build -t merits-l-text .
 # -t  幫 image 取名字 (tag)
 # .   build context = 當前資料夾
@@ -169,8 +169,8 @@ docker build -t merits-l-text .
 ```bash
 # Windows PowerShell 多行用反引號 `
 docker run --gpus all -it --rm `
-    -v "D:/LLM supervised multimodal SER:/workspace/code" `
-    -v "D:/CVdataset/IEMOCAP_full_release:/workspace/datasets/IEMOCAP_full_release" `
+    -v "/path/to/this/repo:/workspace/code" `
+    -v "/path/to/IEMOCAP_full_release:/workspace/datasets/IEMOCAP_full_release" `
     -e IEMOCAP_ROOT=/workspace/datasets/IEMOCAP_full_release `
     -p 6006:6006 `
     merits-l-text bash
@@ -183,7 +183,7 @@ cd /workspace/code
 python -m src.train --config configs/iemocap_text.yaml
 ```
 
-訓練結果會寫進本機的 `D:/LLM supervised multimodal SER/outputs/`（因為 mount）。
+訓練結果會寫進本機的 `/path/to/this/repo/outputs/`（因為 mount）。
 
 ### 6.3 退出 container
 
