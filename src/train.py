@@ -279,7 +279,7 @@ def train(cfg: AttrDict) -> None:
     # Test using the best checkpoint
     if "test" in loaders and best_epoch > 0:
         runlog.info(f"Reloading best checkpoint from epoch {best_epoch} for test evaluation.")
-        ckpt = torch.load(best_ckpt_dir / "classifier.pt", map_location=device)
+        ckpt = torch.load(best_ckpt_dir / "classifier.pt", map_location=device, weights_only=True)
         model.load_state_dict(ckpt["model_state_dict"])
         test_metrics = evaluate(model, loaders["test"], device, label_names)
         runlog.log_scalars(
