@@ -47,6 +47,6 @@ train:
   num_workers: 4
 
 logging:
-  use_wandb: false
+  use_wandb: true
   wandb_project: merits-l-text
   log_every: 100

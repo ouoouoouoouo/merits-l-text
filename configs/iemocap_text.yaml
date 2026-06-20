@@ -53,6 +53,6 @@ train:
   num_workers: 4
 
 logging:
-  use_wandb: false   # flip on with WANDB_API_KEY set
+  use_wandb: true    # auto-disables itself if WANDB_API_KEY is not set
   wandb_project: merits-l-text
   log_every: 50

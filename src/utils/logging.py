@@ -17,6 +17,18 @@ except Exception:  # pragma: no cover
     _WANDB_AVAILABLE = False
 
 
+def _to_plain(obj: Any) -> Any:
+    """Recursively convert AttrDict / list-of-AttrDict to plain dict/list so that
+    WandB's config serializer doesn't choke."""
+    if isinstance(obj, dict):
+        return {str(k): _to_plain(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_to_plain(x) for x in obj]
+    if isinstance(obj, (str, int, float, bool)) or obj is None:
+        return obj
+    return str(obj)
+
+
 class RunLogger:
     def __init__(
         self,
@@ -57,9 +69,10 @@ class RunLogger:
                 project=wandb_project,
                 name=run_name,
                 dir=str(self.output_dir),
-                config=wandb_config or {},
+                config=_to_plain(wandb_config or {}),
                 reinit=True,
             )
+            self.logger.info(f"WandB run: {wandb.run.url}")
 
     # --- helpers --------------------------------------------------------
     def info(self, msg: str) -> None:
