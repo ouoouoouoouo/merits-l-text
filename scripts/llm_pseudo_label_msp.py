@@ -28,6 +28,7 @@ import argparse
 import asyncio
 import csv
 import os
+import random
 import sys
 import time
 from collections import Counter
@@ -35,6 +36,31 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 from tqdm.asyncio import tqdm_asyncio
+
+
+class AsyncRateLimiter:
+    """Hard cap on requests per second across all coroutines.
+
+    Implements a simple sliding-window: each acquire() waits until at least
+    `min_interval` has passed since the previous one. Lockless contention is
+    fine because the critical section is microseconds.
+    """
+
+    def __init__(self, max_per_second: float) -> None:
+        self.min_interval = 1.0 / max_per_second if max_per_second > 0 else 0.0
+        self._next_ok_at = 0.0
+        self._lock = asyncio.Lock()
+
+    async def acquire(self) -> None:
+        if self.min_interval <= 0:
+            return
+        async with self._lock:
+            now = time.monotonic()
+            wait = self._next_ok_at - now
+            if wait > 0:
+                await asyncio.sleep(wait)
+                now = time.monotonic()
+            self._next_ok_at = max(now, self._next_ok_at) + self.min_interval
 
 PROMPT = (
     "You are a sentiment classification bot. Given the [sentence], classify as "
@@ -68,27 +94,45 @@ async def _label_one(
     utt_id: str,
     text: str,
     semaphore,
+    rate_limiter: AsyncRateLimiter,
+    max_retries: int = 6,
 ) -> Tuple[str, str, Optional[str], int, int]:
-    """Returns (utt_id, text, label_or_None, prompt_tokens, completion_tokens)."""
+    """Returns (utt_id, text, label_or_None, prompt_tokens, completion_tokens).
+
+    Retries on 429 (rate limit) and 5xx with exponential backoff + jitter.
+    """
     async with semaphore:
-        try:
-            resp = await client.chat.completions.create(
-                model=model,
-                temperature=0.0,
-                max_tokens=4,
-                messages=[
-                    {"role": "system", "content": PROMPT},
-                    {"role": "user", "content": f"[sentence]: {text}"},
-                ],
-            )
-            raw = resp.choices[0].message.content or ""
-            usage = getattr(resp, "usage", None)
-            pt = int(getattr(usage, "prompt_tokens", 0) or 0)
-            ct = int(getattr(usage, "completion_tokens", 0) or 0)
-            return utt_id, text, _parse_label(raw), pt, ct
-        except Exception as e:  # noqa: BLE001
-            print(f"[warn] {utt_id}: {e}", file=sys.stderr)
-            return utt_id, text, None, 0, 0
+        for attempt in range(max_retries):
+            await rate_limiter.acquire()
+            try:
+                resp = await client.chat.completions.create(
+                    model=model,
+                    temperature=0.0,
+                    max_tokens=4,
+                    messages=[
+                        {"role": "system", "content": PROMPT},
+                        {"role": "user", "content": f"[sentence]: {text}"},
+                    ],
+                )
+                raw = resp.choices[0].message.content or ""
+                usage = getattr(resp, "usage", None)
+                pt = int(getattr(usage, "prompt_tokens", 0) or 0)
+                ct = int(getattr(usage, "completion_tokens", 0) or 0)
+                return utt_id, text, _parse_label(raw), pt, ct
+            except Exception as e:  # noqa: BLE001
+                msg = str(e)
+                # Retry on rate limit (429) and transient server errors (5xx).
+                retriable = ("429" in msg) or ("rate_limit" in msg.lower()) or \
+                            ("500" in msg) or ("502" in msg) or ("503" in msg) or ("504" in msg) or \
+                            ("timeout" in msg.lower())
+                if retriable and attempt < max_retries - 1:
+                    # exponential backoff: 1, 2, 4, 8, 16, 32 sec  + jitter
+                    sleep = (2 ** attempt) + random.uniform(0, 1)
+                    await asyncio.sleep(sleep)
+                    continue
+                print(f"[warn] {utt_id}: {e}", file=sys.stderr)
+                return utt_id, text, None, 0, 0
+        return utt_id, text, None, 0, 0
 
 
 def _read_existing(out_csv: Path) -> set:
@@ -176,8 +220,11 @@ async def _main_async(args) -> None:
             wb.finish()
         return
 
-    client = AsyncOpenAI()
+    client = AsyncOpenAI(timeout=30.0)
     sem = asyncio.Semaphore(int(args.concurrency))
+    # OpenAI Tier 1 gpt-3.5-turbo = 500 RPM = 8.33 req/s. Default to 7.5 to
+    # leave headroom; bump with --rpm if you've moved to a higher tier.
+    rate_limiter = AsyncRateLimiter(max_per_second=args.rpm / 60.0)
 
     # Resume-friendly: open in append mode, write header only if new.
     write_header = not out_csv.exists() or out_csv.stat().st_size == 0
@@ -195,7 +242,10 @@ async def _main_async(args) -> None:
     log_every = max(1, int(args.log_every))
 
     try:
-        tasks = [_label_one(client, args.model, u, t, sem) for u, t in pending]
+        tasks = [
+            _label_one(client, args.model, u, t, sem, rate_limiter, max_retries=int(args.max_retries))
+            for u, t in pending
+        ]
         for fut in tqdm_asyncio.as_completed(tasks, total=len(tasks)):
             utt_id, text, label, pt, ct = await fut
             total_pt += pt
@@ -266,7 +316,13 @@ def main() -> None:
     parser.add_argument("--in-csv", required=True, type=str)
     parser.add_argument("--out-csv", required=True, type=str)
     parser.add_argument("--model", default="gpt-3.5-turbo", type=str)
-    parser.add_argument("--concurrency", default=16, type=int)
+    parser.add_argument("--concurrency", default=16, type=int,
+                        help="Max in-flight requests at once.")
+    parser.add_argument("--rpm", default=450, type=float,
+                        help="Hard cap on requests/minute. OpenAI Tier 1 = 500 RPM; "
+                             "we default to 450 to stay safely under. Bump if tier >= 2.")
+    parser.add_argument("--max-retries", default=6, type=int,
+                        help="Max retries per request on 429 / 5xx / timeout.")
 
     # WandB (optional)
     parser.add_argument("--wandb", action="store_true",
