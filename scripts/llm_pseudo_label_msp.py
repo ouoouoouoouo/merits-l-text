@@ -155,9 +155,6 @@ def _init_wandb(args, total: int, already_done: int, to_process: int):
     except ImportError:
         print("[warn] --wandb requested but `wandb` not installed; skipping.", file=sys.stderr)
         return None
-    if not os.environ.get("WANDB_API_KEY"):
-        print("[warn] --wandb requested but WANDB_API_KEY not set; skipping.", file=sys.stderr)
-        return None
 
     config = {
         "task": "llm_pseudo_labeling",
@@ -175,12 +172,17 @@ def _init_wandb(args, total: int, already_done: int, to_process: int):
         "price_input_per_1m": args.price_input,
         "price_output_per_1m": args.price_output,
     }
-    wandb.init(
-        project=args.wandb_project,
-        name=args.wandb_run_name or f"label_{Path(args.in_csv).stem}",
-        config=config,
-        reinit=True,
-    )
+    try:
+        wandb.init(
+            project=args.wandb_project,
+            name=args.wandb_run_name or f"label_{Path(args.in_csv).stem}",
+            config=config,
+            reinit=True,
+        )
+    except Exception as e:  # noqa: BLE001
+        print(f"[warn] wandb.init failed ({e}); continuing without WandB.\n"
+              f"        Hint: run `wandb login` or set WANDB_API_KEY.", file=sys.stderr)
+        return None
     print(f"WandB run: {wandb.run.url}")
     return wandb
 

@@ -58,21 +58,25 @@ class RunLogger:
 
         self.metrics_path = self.output_dir / "metrics.jsonl"
 
-        self.use_wandb = bool(use_wandb and _WANDB_AVAILABLE and os.environ.get("WANDB_API_KEY"))
-        if use_wandb and not self.use_wandb:
-            self.logger.warning(
-                "use_wandb=True but WANDB_API_KEY missing or wandb not installed — "
-                "falling back to TensorBoard only."
-            )
+        self.use_wandb = bool(use_wandb and _WANDB_AVAILABLE)
+        if use_wandb and not _WANDB_AVAILABLE:
+            self.logger.warning("use_wandb=True but `wandb` not installed — falling back to TB only.")
         if self.use_wandb:
-            wandb.init(
-                project=wandb_project,
-                name=run_name,
-                dir=str(self.output_dir),
-                config=_to_plain(wandb_config or {}),
-                reinit=True,
-            )
-            self.logger.info(f"WandB run: {wandb.run.url}")
+            try:
+                wandb.init(
+                    project=wandb_project,
+                    name=run_name,
+                    dir=str(self.output_dir),
+                    config=_to_plain(wandb_config or {}),
+                    reinit=True,
+                )
+                self.logger.info(f"WandB run: {wandb.run.url}")
+            except Exception as e:  # noqa: BLE001
+                self.logger.warning(
+                    f"wandb.init failed ({e}); falling back to TB only. "
+                    f"Hint: run `wandb login` or set WANDB_API_KEY."
+                )
+                self.use_wandb = False
 
     # --- helpers --------------------------------------------------------
     def info(self, msg: str) -> None:
