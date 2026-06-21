@@ -40,7 +40,11 @@ train:
   epochs: 50
   batch_size: 32
   eval_batch_size: 64
-  learning_rate: 1.0e-4
+  # NOTE: paper says 1e-4 but that's the edge for RoBERTa-large under fp16 —
+  # we saw majority-class collapse on both pretrain and downstream. 2e-5 is
+  # the standard safe lr for RoBERTa-large; bf16 + 1e-4 might also work if
+  # you want to match the paper bit-for-bit.
+  learning_rate: 2.0e-5
   weight_decay: 0.01
   warmup_ratio: 0.06
   optimizer: adamw
