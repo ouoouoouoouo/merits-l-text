@@ -55,7 +55,7 @@ def evaluate(model, loader, device, label_names) -> Dict:
 
 
 def train(cfg: AttrDict) -> None:
-    set_seed(int(cfg.seed))
+    set_seed(int(cfg.seed), deterministic=bool(cfg.get("deterministic", False)))
     out_dir = Path(cfg.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "config.snapshot.yaml").write_text(
