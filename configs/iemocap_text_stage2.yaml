@@ -1,0 +1,44 @@
+# Stage II — Text-only, IEMOCAP (4-way)
+# Paper target: weighted F1 = 83.85 (text Stage II), +14 points over Stage I.
+
+run_name: iemocap_text_stage2
+seed: 42
+output_dir: outputs/iemocap_text_stage2
+
+dataset:
+  # Built by scripts/preprocess_iemocap.py (already done in Stage I).
+  manifest_dir: data/manifests/iemocap
+  # Built by scripts/extract_text_features.py from the Stage I best checkpoint.
+  features_path: data/cache/iemocap_text_features.pt
+  num_labels: 4
+  label_names: [angry, happy, sad, neutral]
+
+model:
+  input_dim: 1024          # RoBERTa-large hidden size
+  gru_hidden: 256          # Bi-GRU output dim = 512
+  num_heads: 4             # 512 / 4 = 128 per head
+  dropout: 0.3
+  num_labels: 4
+
+train:
+  epochs: 50
+  batch_size: 8            # dialogues per batch (each dialogue has ~25-50 utts)
+  eval_batch_size: 16
+  # Stage II only trains the small Bi-GRU+attn+head (~3M params), not RoBERTa,
+  # so lr=1e-4 is fine here. (RoBERTa-sensitive issue from Stage I doesn't apply.)
+  learning_rate: 1.0e-4
+  weight_decay: 0.01
+  warmup_ratio: 0.06
+  optimizer: adamw
+  scheduler: linear
+  grad_clip: 1.0
+  fp16: false              # tiny model, no benefit; keeps numerics simple
+  early_stopping_patience: 10
+  save_best_metric: weighted_f1
+  save_best_split: val
+  num_workers: 2
+
+logging:
+  use_wandb: true
+  wandb_project: merits-l-text
+  log_every: 10
