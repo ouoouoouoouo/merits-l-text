@@ -14,27 +14,30 @@ dataset:
   label_names: [angry, happy, sad, neutral]
 
 model:
+  # === "D" config — verified best across 4 seeds (mean 0.8209 ± 0.004) ===
+  # vs original baseline (256/1/4/0.3) which gave 0.8081 ± 0.0117 (3× more variance).
+  # See sweep results in scripts/sweep_stage2.sh history.
   input_dim: 1024          # RoBERTa-large hidden size
-  gru_hidden: 256          # Bi-GRU output dim = 2 * gru_hidden
-  gru_layers: 1            # 1 layer (default). 2 = more depth + between-layer dropout
-  num_heads: 4             # 2*gru_hidden must be divisible by num_heads
-  dropout: 0.3
+  gru_hidden: 512          # Bi-GRU output dim = 2 * gru_hidden = 1024
+  gru_layers: 2            # 2-layer + between-layer dropout
+  num_heads: 8             # 1024 / 8 = 128 per head
+  dropout: 0.5             # heavier reg works with bigger model
   num_labels: 4
 
 train:
-  epochs: 50
-  batch_size: 8            # dialogues per batch (each dialogue has ~25-50 utts)
+  epochs: 100              # was 50; longer training pairs with smaller lr
+  batch_size: 8
   eval_batch_size: 16
-  # Stage II only trains the small Bi-GRU+attn+head (~3M params), not RoBERTa,
-  # so lr=1e-4 is fine here. (RoBERTa-sensitive issue from Stage I doesn't apply.)
-  learning_rate: 1.0e-4
+  # Bigger model needs smaller lr (1e-4 collapsed the 512-hidden variant).
+  # See sweep: A_big (lr=1e-4, hidden=512) → 0.7755 vs D (lr=5e-5) → 0.8209.
+  learning_rate: 5.0e-5
   weight_decay: 0.01
   warmup_ratio: 0.06
   optimizer: adamw
   scheduler: linear
   grad_clip: 1.0
-  fp16: false              # tiny model, no benefit; keeps numerics simple
-  early_stopping_patience: 10
+  fp16: false
+  early_stopping_patience: 20
   save_best_metric: weighted_f1
   save_best_split: val
   num_workers: 2
