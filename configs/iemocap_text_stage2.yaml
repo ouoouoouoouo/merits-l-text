@@ -15,8 +15,9 @@ dataset:
 
 model:
   input_dim: 1024          # RoBERTa-large hidden size
-  gru_hidden: 256          # Bi-GRU output dim = 512
-  num_heads: 4             # 512 / 4 = 128 per head
+  gru_hidden: 256          # Bi-GRU output dim = 2 * gru_hidden
+  gru_layers: 1            # 1 layer (default). 2 = more depth + between-layer dropout
+  num_heads: 4             # 2*gru_hidden must be divisible by num_heads
   dropout: 0.3
   num_labels: 4
 

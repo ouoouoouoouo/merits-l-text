@@ -32,6 +32,7 @@ class TextStage2(nn.Module):
         self,
         input_dim: int = 1024,
         gru_hidden: int = 256,
+        gru_layers: int = 1,
         num_heads: int = 4,
         num_labels: int = 4,
         dropout: float = 0.3,
@@ -40,9 +41,12 @@ class TextStage2(nn.Module):
         self.bigru = nn.GRU(
             input_size=input_dim,
             hidden_size=gru_hidden,
-            num_layers=1,
+            num_layers=gru_layers,
             batch_first=True,
             bidirectional=True,
+            # PyTorch GRU's `dropout` arg only applies BETWEEN layers; for
+            # 1-layer this must be 0 to silence a warning.
+            dropout=dropout if gru_layers > 1 else 0.0,
         )
         feature_dim = 2 * gru_hidden
 
@@ -113,6 +117,7 @@ def build_text_stage2(cfg) -> TextStage2:
     return TextStage2(
         input_dim=int(cfg.input_dim),
         gru_hidden=int(cfg.gru_hidden),
+        gru_layers=int(cfg.get("gru_layers", 1)) if hasattr(cfg, "get") else 1,
         num_heads=int(cfg.num_heads),
         num_labels=int(cfg.num_labels),
         dropout=float(cfg.dropout),
