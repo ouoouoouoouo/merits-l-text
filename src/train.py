@@ -41,7 +41,19 @@ from .utils.seed import set_seed
 def ensure_manifests(cfg: AttrDict) -> Path:
     """Build per-split CSV manifests if missing, return the manifest dir."""
     ds = cfg.dataset
-    manifest_dir = Path(ds.manifest_dir)
+    # Defensive: manifest_dir is required, but for backward-compat with configs
+    # that only specify `manifest_path` (a source CSV), default to a sibling
+    # folder named "<source>_splits".
+    manifest_dir = ds.get("manifest_dir") if isinstance(ds, dict) else getattr(ds, "manifest_dir", None)
+    if not manifest_dir:
+        mp = ds.get("manifest_path") if isinstance(ds, dict) else getattr(ds, "manifest_path", None)
+        if not mp:
+            raise KeyError(
+                f"dataset.{ds.name}: must set either `manifest_dir` or `manifest_path` in the config."
+            )
+        manifest_dir = str(Path(mp).with_suffix("")) + "_splits"
+        print(f"[manifests] `manifest_dir` not set, defaulting to {manifest_dir}")
+    manifest_dir = Path(manifest_dir)
 
     expected = {"train.csv", "val.csv", "test.csv"}
     if ds.name == "msp_podcast_pseudo":

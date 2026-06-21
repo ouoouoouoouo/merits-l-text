@@ -14,6 +14,8 @@ dataset:
   # Path to the manifest produced by scripts/llm_pseudo_label_msp.py
   # Expected columns: utt_id,text,label (label in {positive, negative, neutral})
   manifest_path: data/manifests/msp_podcast/pseudo_labels.csv
+  # Where to write the 80/20 train/val split CSVs (so the source CSV stays untouched).
+  manifest_dir: data/manifests/msp_podcast/pretrain_splits
   val_fraction: 0.20    # paper: 80% train / 20% val (random)
   label_map:
     negative: 0
