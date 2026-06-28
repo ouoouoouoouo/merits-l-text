@@ -32,8 +32,11 @@ class RobertaTextClassifier(nn.Module):
         num_labels: int = 4,
         dropout: float = 0.1,
         freeze_encoder: bool = False,
+        pooling: str = "cls",
     ) -> None:
         super().__init__()
+        if pooling not in ("cls", "mean"):
+            raise ValueError(f"pooling must be 'cls' or 'mean', got {pooling!r}")
         config = AutoConfig.from_pretrained(pretrained)
         self.encoder = AutoModel.from_pretrained(pretrained, config=config)
         hidden_size = config.hidden_size
@@ -48,12 +51,26 @@ class RobertaTextClassifier(nn.Module):
 
         self.num_labels = num_labels
         self.config = config
+        self.pooling = pooling
 
     def get_features(self, input_ids: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
-        """Pooled (B, H) utterance embedding — used downstream by Stage II."""
+        """Pooled (B, H) utterance embedding — used downstream by Stage II.
+
+        Pooling rules:
+          - "cls" : take the <s> (CLS) hidden state (HuggingFace default).
+          - "mean": masked mean over all real tokens (closer to the CARE
+                    alignment target used by the same authors).
+        """
         outputs = self.encoder(input_ids=input_ids, attention_mask=attention_mask)
-        cls = outputs.last_hidden_state[:, 0]  # <s> token
-        x = self.dropout(cls)
+        hidden = outputs.last_hidden_state                     # (B, T, H)
+        if self.pooling == "cls":
+            pooled = hidden[:, 0]
+        else:  # mean
+            mask = attention_mask.unsqueeze(-1).float()        # (B, T, 1)
+            summed = (hidden * mask).sum(dim=1)                # (B, H)
+            denom = mask.sum(dim=1).clamp(min=1e-6)            # (B, 1)
+            pooled = summed / denom
+        x = self.dropout(pooled)
         x = torch.tanh(self.dense(x))
         x = self.dropout(x)
         return x
@@ -75,11 +92,17 @@ class RobertaTextClassifier(nn.Module):
 
 def build_model(cfg) -> RobertaTextClassifier:
     """Instantiate the model from a config dataclass / dict-like."""
+    pooling = "cls"
+    if hasattr(cfg, "get"):
+        pooling = cfg.get("pooling", "cls") or "cls"
+    elif hasattr(cfg, "pooling"):
+        pooling = cfg.pooling
     return RobertaTextClassifier(
         pretrained=cfg.pretrained,
         num_labels=cfg.num_labels,
         dropout=cfg.dropout,
         freeze_encoder=cfg.freeze_encoder,
+        pooling=pooling,
     )
 
 

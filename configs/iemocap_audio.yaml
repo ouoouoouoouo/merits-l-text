@@ -1,0 +1,44 @@
+# Audio Stage I — IEMOCAP, 4-way emotion (angry / happy+exc / sad / neutral)
+# Paper target (Table I, audio Stage I): weighted F1 = 0.6693 (using CARE)
+#
+# We use WavLM-base as substitute since CARE doesn't release weights and is
+# itself built on WavLM-base. Expected: ~0.64-0.66 (within 1-3% of CARE).
+
+run_name: iemocap_audio_stage1
+seed: 42
+output_dir: outputs/iemocap_audio_stage1
+
+dataset:
+  # Built by scripts/preprocess_iemocap.py (reuse existing manifest, just need utt_id + label)
+  manifest_dir: data/manifests/iemocap
+  # Built by scripts/extract_audio_features.py
+  features_path: data/cache/iemocap_audio_features_wavlm_base.pt
+  num_labels: 4
+  label_names: [angry, happy, sad, neutral]
+
+model:
+  input_dim: 768           # WavLM-base hidden size
+  hidden_dim: 768
+  dropout: 0.3
+  num_labels: 4
+
+train:
+  epochs: 50
+  batch_size: 32
+  eval_batch_size: 64
+  # Tiny FC head only — paper lr=1e-4 is safe here (no RoBERTa-large sensitivity).
+  learning_rate: 1.0e-4
+  weight_decay: 0.01
+  warmup_ratio: 0.06
+  optimizer: adamw
+  scheduler: linear
+  grad_clip: 1.0
+  early_stopping_patience: 10
+  save_best_metric: weighted_f1
+  save_best_split: val
+  num_workers: 2
+
+logging:
+  use_wandb: true
+  wandb_project: merits-l-text     # keep same project for cross-modality comparison
+  log_every: 20

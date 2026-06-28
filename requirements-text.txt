@@ -22,3 +22,6 @@ tqdm>=4.66
 # Logging
 tensorboard>=2.14
 wandb>=0.16
+
+# Audio (for Stage III branch — WavLM feature extraction)
+soundfile>=0.12
