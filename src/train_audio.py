@@ -180,6 +180,16 @@ def train(cfg: AttrDict) -> None:
         (out_dir / "test_report.txt").write_text(report, encoding="utf-8")
         runlog.info("\n" + report)
 
+    # Diagnostic: print learned layer weights if applicable (SUPERB-style)
+    if hasattr(model, "get_layer_weights"):
+        weights = model.get_layer_weights()
+        if weights.numel() > 0:
+            w_str = ", ".join(f"L{i}={w:.3f}" for i, w in enumerate(weights.tolist()))
+            runlog.info(f"Learned layer weights (softmax): {w_str}")
+            runlog.info(f"  argmax layer = L{int(weights.argmax())}  "
+                        f"(max weight {weights.max().item():.3f}, "
+                        f"entropy {-(weights * (weights + 1e-12).log()).sum().item():.3f} nats)")
+
     runlog.info(f"DONE. Best {cfg.train.save_best_metric} = {best_score:.4f} (epoch {best_epoch}).")
     runlog.close()
 

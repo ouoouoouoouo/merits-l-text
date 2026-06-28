@@ -78,7 +78,7 @@ nvidia-smi
 
 ```bash
 # 最新版 (推薦) — transformers 4.40+ 要求 torch >= 2.4
-pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
+pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu124
 ```
 
 > ⚠️ 不要釘到 torch 2.3.x — 跟新版 `transformers` 不相容會在 model load 階段報

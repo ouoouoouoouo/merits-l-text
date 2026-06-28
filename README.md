@@ -71,7 +71,7 @@ python -m src.train --config configs/iemocap_text.yaml
 ```bash
 # 詳見 docs/CONDA_zh.md
 conda create -n merits python=3.10 -y && conda activate merits
-pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
+pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu124
 pip install -r requirements-text.txt
 
 export IEMOCAP_ROOT=/path/to/IEMOCAP_full_release

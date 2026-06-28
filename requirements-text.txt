@@ -5,9 +5,10 @@
 
 # Core
 # NOTE: install torch separately first to control CUDA wheel:
-#   pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
-# transformers 4.40+ requires torch >= 2.4, so do NOT pin to 2.3.x.
-torch>=2.4.0
+#   pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu124
+# Latest transformers requires torch >= 2.6 (CVE-2025-32434 fix for torch.load).
+# PyTorch dropped cu121 wheels at 2.6 — use cu124 (or cu126 for newer drivers).
+torch>=2.6.0
 transformers>=4.40.0
 accelerate>=0.30.0
 tokenizers>=0.15.0

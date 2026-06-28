@@ -16,8 +16,8 @@ dataset:
   label_names: [angry, happy, sad, neutral]
 
 model:
-  input_dim: 768           # audio Stage I output (WavLM-base hidden)
-  gru_hidden: 384          # Bi-GRU output dim = 768 (matches input_dim, divisible by 8)
+  input_dim: 768           # audio Stage I output (WavLM-base hidden, after layer weighting + dense)
+  gru_hidden: 384          # Bi-GRU output dim = 768
   gru_layers: 2
   num_heads: 8             # 768 / 8 = 96 per head
   dropout: 0.5

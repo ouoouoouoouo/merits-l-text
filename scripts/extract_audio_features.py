@@ -88,8 +88,13 @@ def _extract_batch(
     feature_extractor,
     audios: List[np.ndarray],
     device: torch.device,
+    per_layer: bool = False,
 ) -> torch.Tensor:
-    """Returns (B, 768) mean-pooled features."""
+    """If per_layer=False: return (B, hidden) — last-layer mean pool.
+    If per_layer=True : return (B, n_layers, hidden) — SUPERB style, one
+    mean-pooled vector per layer (1 conv extractor output + N transformer
+    layers).
+    """
     inputs = feature_extractor(
         audios,
         sampling_rate=16000,
@@ -98,19 +103,30 @@ def _extract_batch(
         return_attention_mask=True,
     )
     inputs = {k: v.to(device, non_blocking=True) for k, v in inputs.items()}
-    out = model(**inputs)
-    hidden = out.last_hidden_state                                # (B, T_out, 768)
+    out = model(**inputs, output_hidden_states=per_layer)
 
     # WavLM downsamples ~320× via the CNN feature extractor. Compute the
     # output frame counts so padding doesn't poison the mean.
     input_lens = inputs["attention_mask"].sum(dim=-1)
     out_lens = model._get_feat_extract_output_lengths(input_lens).to(device)
-    T_out = hidden.size(1)
-    out_mask = torch.arange(T_out, device=device).unsqueeze(0) < out_lens.unsqueeze(1)
-    out_mask = out_mask.unsqueeze(-1).float()                     # (B, T_out, 1)
 
-    denom = out_mask.sum(dim=1).clamp(min=1.0)                    # (B, 1)
-    pooled = (hidden * out_mask).sum(dim=1) / denom               # (B, 768)
+    if not per_layer:
+        hidden = out.last_hidden_state                            # (B, T_out, H)
+        T_out = hidden.size(1)
+        out_mask = torch.arange(T_out, device=device).unsqueeze(0) < out_lens.unsqueeze(1)
+        out_mask = out_mask.unsqueeze(-1).float()                 # (B, T_out, 1)
+        denom = out_mask.sum(dim=1).clamp(min=1.0)
+        pooled = (hidden * out_mask).sum(dim=1) / denom           # (B, H)
+        return pooled.detach().cpu().to(torch.float32)
+
+    # per-layer SUPERB-style
+    all_hidden = out.hidden_states                                # tuple of (B, T_out, H), len=L
+    stacked = torch.stack(all_hidden, dim=1)                      # (B, L, T_out, H)
+    T_out = stacked.size(2)
+    out_mask = torch.arange(T_out, device=device).unsqueeze(0) < out_lens.unsqueeze(1)
+    out_mask = out_mask.unsqueeze(1).unsqueeze(-1).float()        # (B, 1, T_out, 1)
+    denom = out_mask.sum(dim=2).clamp(min=1.0)                    # (B, 1, 1)
+    pooled = (stacked * out_mask).sum(dim=2) / denom              # (B, L, H)
     return pooled.detach().cpu().to(torch.float32)
 
 
@@ -125,6 +141,10 @@ def main() -> None:
     parser.add_argument("--batch-size", default=8, type=int,
                         help="Lower this if you hit OOM on long utterances.")
     parser.add_argument("--device", default="cuda", choices=["cuda", "cpu"])
+    parser.add_argument("--per-layer", action="store_true",
+                        help="SUPERB-style: extract all transformer layer outputs (1 + N) "
+                             "instead of just last layer. Used by audio classifier's learnable "
+                             "convex combination, matching CARE's inference protocol.")
     args = parser.parse_args()
 
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
@@ -166,7 +186,10 @@ def main() -> None:
             uids = [b[0] for b in batch]
             try:
                 audios = [_read_wav(b[1]) for b in batch]
-                pooled = _extract_batch(model, feature_extractor, audios, device)
+                pooled = _extract_batch(
+                    model, feature_extractor, audios, device,
+                    per_layer=bool(args.per_layer),
+                )
                 for uid, feat in zip(uids, pooled):
                     features[uid] = feat.clone()
             except Exception as e:  # noqa: BLE001
@@ -174,10 +197,12 @@ def main() -> None:
                 failed += len(batch)
 
     print(f"\nDone. extracted={len(features)} failed={failed}")
+    sample = next(iter(features.values()))
+    print(f"Per-utt feature shape: {tuple(sample.shape)}")
     print(f"Saving to {out_pt} ...")
     torch.save(features, out_pt)
     size_mb = out_pt.stat().st_size / (1024 * 1024)
-    print(f"Saved {out_pt} ({size_mb:.1f} MB, dim={hidden_dim})")
+    print(f"Saved {out_pt} ({size_mb:.1f} MB)")
 
 
 if __name__ == "__main__":

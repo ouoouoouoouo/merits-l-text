@@ -9,10 +9,10 @@ seed: 42
 output_dir: outputs/iemocap_audio_stage1
 
 dataset:
-  # Built by scripts/preprocess_iemocap.py (reuse existing manifest, just need utt_id + label)
   manifest_dir: data/manifests/iemocap
-  # Built by scripts/extract_audio_features.py
-  features_path: data/cache/iemocap_audio_features_wavlm_base.pt
+  # SUPERB-style per-layer features (1 conv + 12 transformer layers = 13).
+  # Produced by `extract_audio_features.py --per-layer` with wavlm-base.
+  features_path: data/cache/iemocap_audio_features_wavlm_base_layers.pt
   num_labels: 4
   label_names: [angry, happy, sad, neutral]
 
@@ -21,6 +21,10 @@ model:
   hidden_dim: 768
   dropout: 0.3
   num_labels: 4
+  # 13 = 1 (CNN extractor projection) + 12 (transformer layers) for WavLM-base.
+  # Matches paper's "convex combination of 13 layer representations" (Sec III-A-3).
+  # Set to null / remove this line to disable layer weighting (uses single-layer features).
+  num_layers: 13
 
 train:
   epochs: 50
