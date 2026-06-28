@@ -46,6 +46,7 @@ def main() -> None:
         hidden_dim=int(mcfg.get("hidden_dim", mcfg["input_dim"])),
         num_labels=int(mcfg["num_labels"]),
         dropout=float(mcfg["dropout"]),
+        num_layers=mcfg.get("num_layers"),    # ← preserve SUPERB-style layer weighting
     )
     model.load_state_dict(ckpt["model_state_dict"])
     model = model.to(device).eval()
