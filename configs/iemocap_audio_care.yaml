@@ -18,13 +18,12 @@ dataset:
   label_names: [angry, happy, sad, neutral]
 
 model:
-  input_dim: 768           # CARE `pooled_audio` utterance embedding
-  hidden_dim: 768
+  input_dim: 1536          # CARE SUPERB-13 combined (each layer 1536-d)
+  hidden_dim: 1536
   dropout: 0.3
   num_labels: 4
-  # Note: MVP uses the model's own utterance-level pooling (`pooled_audio`).
-  # For SUPERB 13-layer (paper Sec IV-B) uncomment and set num_layers: 13 +
-  # re-extract features with the layer-hook version of the extractor.
+  # SUPERB-style layer weighting: 1 conv + 6 common encoder + 6 concat(acoustic, semantic)
+  num_layers: 13
 
 train:
   epochs: 50
