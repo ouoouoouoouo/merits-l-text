@@ -20,10 +20,10 @@ dataset:
   label_names: [angry, happy, sad, neutral]
 
 model:
-  input_dim: 1536          # audio Stage I hidden dim
-  gru_hidden: 512          # 2 * 512 = 1024
+  input_dim: 768           # audio Stage I hidden dim (matches Stage I hidden_dim=768)
+  gru_hidden: 384          # 2 * 384 = 768
   gru_layers: 2
-  num_heads: 8
+  num_heads: 8             # 768 / 8 = 96
   dropout: 0.5
   num_labels: 4
 

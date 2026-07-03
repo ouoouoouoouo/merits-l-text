@@ -18,14 +18,13 @@ dataset:
   label_names: [angry, happy, sad, neutral]
 
 model:
-  input_dim: 1536          # CARE concat(acoustic+semantic) dim
-  hidden_dim: 1536
+  input_dim: 768           # CARE `pooled_audio` utterance embedding
+  hidden_dim: 768
   dropout: 0.3
   num_labels: 4
-  # 13 = 1 (conv extractor) + 6 (common encoder = audio_model in code)
-  #    + 6 (concat acoustic+semantic = dual_model+common_model in code)
-  # Matches CARE paper Sec IV-B SUPERB-style convex combination.
-  num_layers: 13
+  # Note: MVP uses the model's own utterance-level pooling (`pooled_audio`).
+  # For SUPERB 13-layer (paper Sec IV-B) uncomment and set num_layers: 13 +
+  # re-extract features with the layer-hook version of the extractor.
 
 train:
   epochs: 50
