@@ -1,0 +1,47 @@
+# Audio Stage I — IEMOCAP, HuBERT-base backbone (ablation vs WavLM-base).
+#
+# HuBERT is the direct predecessor of WavLM. Expected result: within 1% of
+# vanilla WavLM Stage I (0.6396). If yes, confirms audio SSL family
+# is largely interchangeable in this pipeline.
+
+run_name: iemocap_audio_hubert_stage1
+seed: 42
+output_dir: outputs/iemocap_audio_hubert_stage1
+
+dataset:
+  manifest_dir: data/manifests/iemocap
+  # SUPERB-style per-layer features. Produced by:
+  #   python -m scripts.extract_audio_features \
+  #       --model facebook/hubert-base-ls960 --per-layer \
+  #       --out-pt data/cache/iemocap_audio_features_hubert_base_layers.pt
+  features_path: data/cache/iemocap_audio_features_hubert_base_layers.pt
+  num_labels: 4
+  label_names: [angry, happy, sad, neutral]
+
+model:
+  input_dim: 768           # HuBERT-base hidden size (same as WavLM-base)
+  hidden_dim: 768
+  dropout: 0.3
+  num_labels: 4
+  # 13 = 1 conv + 12 transformer layers, same as WavLM-base
+  num_layers: 13
+
+train:
+  epochs: 50
+  batch_size: 32
+  eval_batch_size: 64
+  learning_rate: 1.0e-4
+  weight_decay: 0.01
+  warmup_ratio: 0.06
+  optimizer: adamw
+  scheduler: linear
+  grad_clip: 1.0
+  early_stopping_patience: 10
+  save_best_metric: weighted_f1
+  save_best_split: val
+  num_workers: 2
+
+logging:
+  use_wandb: true
+  wandb_project: merits-l-text
+  log_every: 20
